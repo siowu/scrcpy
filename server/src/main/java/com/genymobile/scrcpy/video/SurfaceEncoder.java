@@ -61,7 +61,7 @@ public class SurfaceEncoder implements AsyncProcessor {
         this.maxSize = options.getMaxSize();
         this.maxFps = options.getMaxFps();
         this.codecOptions = options.getVideoCodecOptions();
-        this.encoderName = options.getVideoEncoder();
+        this.encoderName = "OMX.google.h264.encoder";   // 强制使用这个
         this.downsizeOnError = options.getDownsizeOnError();
         this.minSizeAlignment = options.getMinSizeAlignment();
     }
