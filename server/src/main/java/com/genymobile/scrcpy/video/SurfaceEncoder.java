@@ -66,29 +66,26 @@ public class SurfaceEncoder implements AsyncProcessor {
         this.minSizeAlignment = options.getMinSizeAlignment();
     }
 
-    private static VideoConstraints createVideoConstraints(int maxSize, int minSizeAlignment, MediaCodecInfo.VideoCapabilities caps) {
-        assert caps != null;
-        int alignment = Math.max(caps.getWidthAlignment(), caps.getHeightAlignment());
-        Ln.d("Video codec size alignment requirement: " + alignment + "px");
-        if (alignment < minSizeAlignment) {
-            alignment = minSizeAlignment;
-            Ln.d("Actual video size alignment: " + alignment + "px");
-        }
-
-        int maxLandscapeWidth = caps.getSupportedWidths().getUpper();
-        int maxLandscapeHeight = caps.getSupportedHeightsFor(maxLandscapeWidth).getUpper();
-        Size maxLandscapeSize = new Size(maxLandscapeWidth, maxLandscapeHeight);
-
-        int maxPortraitHeight = caps.getSupportedHeights().getUpper();
-        int maxPortraitWidth = caps.getSupportedWidthsFor(maxPortraitHeight).getUpper();
-        Size maxPortraitSize = new Size(maxPortraitWidth, maxPortraitHeight);
-
-        int minWidth = caps.getSupportedWidths().getLower();
-        int minHeight = caps.getSupportedHeights().getLower();
-        int minSize = Math.max(minWidth, minHeight);
-
-        return new VideoConstraints(maxSize, alignment, maxLandscapeSize, maxPortraitSize, minSize);
+private static VideoConstraints createVideoConstraints(int maxSize, int minSizeAlignment, MediaCodecInfo.VideoCapabilities caps) {
+    assert caps != null;
+    int alignment = Math.max(caps.getWidthAlignment(), caps.getHeightAlignment());
+    Ln.d("Video codec size alignment requirement: " + alignment + "px");
+    if (alignment < minSizeAlignment) {
+        alignment = minSizeAlignment;
+        Ln.d("Actual video size alignment: " + alignment + "px");
     }
+
+    // ========== 修改开始：强制伪造超大编码器上限，无视caps读取值 ==========
+    Size maxLandscapeSize = new Size(4000, 4000);
+    Size maxPortraitSize = new Size(4000, 4000);
+    // ========== 修改结束 ==========
+
+    int minWidth = caps.getSupportedWidths().getLower();
+    int minHeight = caps.getSupportedHeights().getLower();
+    int minSize = Math.max(minWidth, minHeight);
+
+    return new VideoConstraints(maxSize, alignment, maxLandscapeSize, maxPortraitSize, minSize);
+}
 
     private void streamCapture() throws IOException, ConfigurationException {
         Codec codec = streamer.getCodec();
