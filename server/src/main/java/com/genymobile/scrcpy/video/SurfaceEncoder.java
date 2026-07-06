@@ -68,21 +68,28 @@ public class SurfaceEncoder implements AsyncProcessor {
 
 private static VideoConstraints createVideoConstraints(int maxSize, int minSizeAlignment, MediaCodecInfo.VideoCapabilities caps) {
     assert caps != null;
-    int alignment = Math.max(caps.getWidthAlignment(), caps.getHeightAlignment());
-    Ln.d("Video codec size alignment requirement: " + alignment + "px");
-    if (alignment < minSizeAlignment) {
-        alignment = minSizeAlignment;
-        Ln.d("Actual video size alignment: " + alignment + "px");
-    }
 
-    // ========== 修改开始：强制伪造超大编码器上限，无视caps读取值 ==========
-    Size maxLandscapeSize = new Size(4000, 4000);
-    Size maxPortraitSize = new Size(4000, 4000);
-    // ========== 修改结束 ==========
+    // === 强制修改部分开始 ===
+    int forcedAlignment = 1;           // 强制最小对齐（原来是读 codec 的）
+    int forcedMaxSize = 1920;          // 你想要的最大边长（可改成 1280、1600、2560 等）
 
-    int minWidth = caps.getSupportedWidths().getLower();
-    int minHeight = caps.getSupportedHeights().getLower();
-    int minSize = Math.max(minWidth, minHeight);
+    Ln.d("Forcing video size alignment: " + forcedAlignment + "px (ignored encoder constraint)");
+    Ln.d("Forcing max size: " + forcedMaxSize);
+
+    // 使用强制值，忽略 codec 报告的限制
+    int alignment = Math.max(forcedAlignment, minSizeAlignment);
+
+    // 强制较大的支持尺寸（绕过 codec 的 getSupportedWidths().getUpper()）
+    int maxLandscapeWidth = forcedMaxSize;
+    int maxLandscapeHeight = forcedMaxSize;
+    Size maxLandscapeSize = new Size(maxLandscapeWidth, maxLandscapeHeight);
+
+    int maxPortraitHeight = forcedMaxSize;
+    int maxPortraitWidth = forcedMaxSize;
+    Size maxPortraitSize = new Size(maxPortraitWidth, maxPortraitHeight);
+
+    int minSize = 1;  // 最小尺寸也放宽
+    // === 强制修改部分结束 ===
 
     return new VideoConstraints(maxSize, alignment, maxLandscapeSize, maxPortraitSize, minSize);
 }
@@ -118,7 +125,10 @@ private static VideoConstraints createVideoConstraints(int maxSize, int minSizeA
 
                 capture.prepare();
                 Size size = capture.getSize();
-
+// 强制兜底
+if (size.getWidth() < 800 || size.getHeight() < 800) {
+    size = new Size(1280, 720);  // 根据你手机比例调整
+}
                 format.setInteger(MediaFormat.KEY_WIDTH, size.getWidth());
                 format.setInteger(MediaFormat.KEY_HEIGHT, size.getHeight());
 
