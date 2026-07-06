@@ -1,0 +1,81 @@
+name: Build scrcpy-server Only
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Version name (default is ref name)'
+
+env:
+  VERSION: ${{ github.event.inputs.name || github.ref_name }}
+
+jobs:
+  # 服务单元测试（可选保留，不需要可整段删除）
+  test-scrcpy-server:
+    runs-on: ubuntu-latest
+    env:
+      GRADLE: gradle
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Test scrcpy-server
+        run: release/test_server.sh
+
+  # 核心：编译 scrcpy-server
+  build-scrcpy-server:
+    runs-on: ubuntu-latest
+    env:
+      GRADLE: gradle
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Build server
+        run: release/build_server.sh
+
+      - name: Upload server artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: scrcpy-server
+          path: release/work/build-server/server/scrcpy-server
+
+  # 打包server、生成校验文件、输出完整release包
+  release:
+    needs:
+      - test-scrcpy-server
+      - build-scrcpy-server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Download built scrcpy-server
+        uses: actions/download-artifact@v8
+        with:
+          name: scrcpy-server
+          path: release/work/build-server/server/
+
+      - name: Package standalone server archive
+        run: release/package_server.sh
+
+      - name: Generate sha256 checksums
+        run: release/generate_checksums.sh
+
+      - name: Upload final release artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: scrcpy-server-release-${{ env.VERSION }}
+          path: release/output
